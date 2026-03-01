@@ -13,24 +13,34 @@ struct TrendsView: View {
                 )
                 .navigationTitle("趋势分析")
             } else {
-                List {
-                    ForEach(store.reports) { report in
-                        NavigationLink(destination: TrendReportView(report: report)) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(report.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(report.summary)
-                                    .lineLimit(2)
-                                Text("\(report.periodStart.formatted(date: .abbreviated, time: .omitted)) - \(report.periodEnd.formatted(date: .abbreviated, time: .omitted))")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                        ForEach(store.reports) { report in
+                            NavigationLink(destination: TrendReportView(report: report)) {
+                                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                                    Text(report.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text(report.summary)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(2)
+                                    Text("\(report.periodStart.formatted(date: .abbreviated, time: .omitted)) - \(report.periodEnd.formatted(date: .abbreviated, time: .omitted))")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: DesignTokens.Sizes.listRowMinHeight, alignment: .leading)
+                                .glassCard()
                             }
-                            .padding(.vertical, 4)
+                            .buttonStyle(.plain)
                         }
                     }
+                    .padding(.horizontal, DesignTokens.Spacing.sm)
+                    .padding(.bottom, DesignTokens.Spacing.xl)
                 }
+                .animation(.spring(response: 0.3, dampingFraction: 0.9), value: store.reports.count)
                 .navigationTitle("趋势分析")
+                .navigationBarTitleDisplayMode(.inline)
             }
         }
     }

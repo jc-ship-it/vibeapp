@@ -13,53 +13,73 @@ struct HomeView: View {
 
     var body: some View {
         NavigationView {
-            ZStack(alignment: .top) {
-                TimelineView(title: "首页")
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                        Text("Vibe")
+                            .font(.largeTitle.bold())
+                            .foregroundColor(.primary)
+                        Text("把截图变成可回顾的洞察。")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, DesignTokens.Spacing.sm)
 
-                if isProcessing {
-                    ProgressView("正在识别文字...")
-                        .padding(8)
-                        .background(.thinMaterial)
-                        .cornerRadius(10)
-                        .padding(.top, 8)
-                }
+                    VStack(spacing: DesignTokens.Spacing.sm) {
+                        PhotosPicker(
+                            selection: $selectedItems,
+                            maxSelectionCount: 20,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            HStack {
+                                Image(systemName: "photo.on.rectangle")
+                                Text("导入截图")
+                            }
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: DesignTokens.Sizes.primaryButtonHeight)
+                        }
+                        .buttonStyle(.borderedProminent)
 
-                if let errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding(.top, 56)
-                }
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            Task { await generateReport() }
+                        } label: {
+                            HStack {
+                                Image(systemName: "sparkles")
+                                Text("生成趋势总结")
+                            }
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: DesignTokens.Sizes.primaryButtonHeight)
+                        }
+                        .buttonStyle(.bordered)
+                    }
 
-                if isAnalyzing {
-                    ProgressView("正在生成复盘...")
-                        .padding(8)
-                        .background(.thinMaterial)
-                        .cornerRadius(10)
-                        .padding(.top, 56)
-                }
+                    statusPanel
+                        .glassCard()
+                        .animation(.spring(response: 0.3, dampingFraction: 0.9), value: isProcessing)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.9), value: isAnalyzing)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.9), value: errorMessage)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.9), value: analysisError)
 
-                if let analysisError {
-                    Text(analysisError)
-                        .foregroundColor(.red)
-                        .padding(.top, 96)
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("最近卡片")
+                            .font(.title2.bold())
+                        if store.items.isEmpty {
+                            Text("还没有内容。先导入几张截图开始。")
+                                .font(.callout)
+                                .foregroundColor(.secondary)
+                        } else {
+                            ForEach(store.items.prefix(3)) { item in
+                                HomeCardRow(item: item)
+                            }
+                        }
+                    }
                 }
+                .padding(.horizontal, DesignTokens.Spacing.sm)
+                .padding(.bottom, DesignTokens.Spacing.xl)
             }
-            .toolbar {
-                Button {
-                    Task { await generateReport() }
-                } label: {
-                    Label("生成总结", systemImage: "sparkles")
-                }
-
-                PhotosPicker(
-                    selection: $selectedItems,
-                    maxSelectionCount: 20,
-                    matching: .images,
-                    photoLibrary: .shared()
-                ) {
-                    Label("导入截图", systemImage: "photo.on.rectangle")
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
             .onChange(of: selectedItems) { newItems in
                 Task {
                     await handleSelectedItems(newItems)
@@ -71,6 +91,38 @@ struct HomeView: View {
                         TrendReportView(report: report)
                     }
                 }
+            }
+        }
+    }
+
+    private var statusPanel: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+            Text("识别状态")
+                .font(.headline)
+            if isProcessing {
+                Text("正在识别截图文字...")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+            } else if isAnalyzing {
+                Text("正在生成趋势总结...")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("已就绪，等待导入截图。")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.callout)
+                    .foregroundColor(.red)
+            }
+
+            if let analysisError {
+                Text(analysisError)
+                    .font(.callout)
+                    .foregroundColor(.red)
             }
         }
     }
@@ -118,5 +170,26 @@ struct HomeView: View {
         } catch {
             analysisError = "生成失败：\(error.localizedDescription)"
         }
+    }
+}
+
+private struct HomeCardRow: View {
+    let item: ScreenshotItem
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(item.summary?.isEmpty == false ? item.summary! : item.ocrText)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+            }
+            Spacer()
+        }
+        .frame(minHeight: DesignTokens.Sizes.listRowMinHeight)
+        .glassCard()
     }
 }

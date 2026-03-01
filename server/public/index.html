@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <title>Vibe App 移动端 Demo</title>
+    <title>Vibe</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -52,7 +52,7 @@
         gap: 8px;
       }
       h1 {
-        font-size: 22px;
+        font-size: 28px;
         margin: 0;
       }
       p {
@@ -61,13 +61,16 @@
         line-height: 1.5;
       }
       .card {
-        background: var(--card);
+        background: color-mix(in srgb, var(--card) 70%, transparent);
         border: 1px solid var(--border);
-        border-radius: 14px;
+        border-radius: 16px;
         padding: 16px;
         display: flex;
         flex-direction: column;
         gap: 12px;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12),
+          0 2px 6px rgba(0, 0, 0, 0.08);
       }
       label {
         font-size: 14px;
@@ -92,9 +95,9 @@
         border: none;
         background: var(--accent);
         color: #fff;
-        padding: 12px 14px;
-        border-radius: 10px;
-        font-size: 16px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        font-size: 17px;
         font-weight: 600;
         cursor: pointer;
       }
@@ -159,12 +162,13 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: var(--card);
+        background: color-mix(in srgb, var(--card) 80%, transparent);
         border-top: 1px solid var(--border);
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 4px;
-        padding: 8px 10px 12px;
+        padding: 8px 10px calc(12px + env(safe-area-inset-bottom));
+        backdrop-filter: blur(18px);
       }
       .tabbar button {
         background: transparent;
@@ -190,17 +194,14 @@
   <body>
     <main>
       <header>
-        <h1>Vibe App 移动端 Demo</h1>
-        <p>
-          在手机浏览器打开本页面，粘贴或输入多段截图文字，点“生成摘要”即可
-          测试分析服务。
-        </p>
+        <h1>Vibe</h1>
+        <p>把截图转成可回顾的洞察。导入图片后会在本地识别文字并生成总结。</p>
       </header>
 
       <section id="tab-home" class="tab-view active">
         <section class="card">
           <span class="pill">输入</span>
-          <label for="texts">截图文字（多段用空行分隔）</label>
+        <label for="texts">识别文本（多段用空行分隔）</label>
           <textarea id="texts" placeholder="例如：&#10;今天喝了拿铁&#10;&#10;今天喝了冰美式"></textarea>
           <label for="imageInput">相册图片（可选）</label>
           <div class="file-row">
@@ -212,31 +213,26 @@
           </div>
           <label for="scene">场景备注（可选）</label>
           <input id="scene" placeholder="例如：咖啡店点评截图" />
-          <button id="analyze">生成摘要</button>
+        <button id="analyze">生成总结</button>
         </section>
 
         <section class="card">
           <span class="pill">结果</span>
-          <div id="status" class="pill">等待输入</div>
+        <div id="status" class="pill">就绪</div>
           <div id="result" class="result"></div>
         </section>
 
-        <section class="card">
-          <span class="pill">提示</span>
-          <p>默认调用本地服务 <code>/analyze</code>。</p>
-          <p>
-            若未配置 OpenAI Key，会返回本地关键词摘要（用于快速演示）。
-          </p>
-          <p class="helper">
-            图片识别使用浏览器本地 OCR，首次加载模型可能稍慢。
-          </p>
-        </section>
+      <section class="card">
+        <span class="pill">处理说明</span>
+        <p>图片识别在本地完成，识别文本用于生成总结。</p>
+        <p class="helper">首次加载 OCR 模型可能稍慢。</p>
+      </section>
       </section>
 
       <section id="tab-trends" class="tab-view">
         <section class="card">
           <span class="pill">趋势分析</span>
-          <p>请在首页导入截图并生成摘要后查看。</p>
+          <p>请在首页导入截图并生成总结后查看。</p>
           <div id="trendResult" class="result"></div>
         </section>
       </section>
@@ -244,7 +240,7 @@
       <section id="tab-history" class="tab-view">
         <section class="card">
           <span class="pill">历史记录</span>
-          <p class="helper">Demo 仅展示最近一次分析结果。</p>
+          <p class="helper">当前仅展示最近一次分析结果。</p>
           <div id="historyResult" class="result"></div>
         </section>
       </section>
@@ -252,8 +248,8 @@
       <section id="tab-account" class="tab-view">
         <section class="card">
           <span class="pill">我的账号</span>
-          <p>登录与同步功能将在 iOS App 中提供。</p>
-          <div class="helper">Web Demo 仅用于体验核心流程。</div>
+          <p>登录与同步功能请在 iOS App 中管理。</p>
+          <div class="helper">Web 端用于快速访问与回顾。</div>
         </section>
       </section>
     </main>
@@ -388,7 +384,7 @@
 
         isOcrRunning = false;
         button.disabled = false;
-        setStatus("等待输入");
+        setStatus("就绪");
       }
 
       button.addEventListener("click", async () => {
@@ -407,7 +403,7 @@
           : [];
         const metadata = {
           scene: sceneInput.value.trim(),
-          source: "mobile-demo"
+          source: "vibe-web"
         };
 
         button.disabled = true;

@@ -11,28 +11,34 @@ struct TimelineView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            Picker("标签", selection: $selectedTag) {
-                ForEach(availableTags, id: \.self) { tag in
-                    Text(tag).tag(tag)
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                Picker("标签", selection: $selectedTag) {
+                    ForEach(availableTags, id: \.self) { tag in
+                        Text(tag).tag(tag)
+                    }
                 }
-            }
-            .pickerStyle(.segmented)
+                .pickerStyle(.segmented)
 
-            if filteredItems.isEmpty {
-                ContentUnavailableView("暂无卡片", systemImage: "tray", description: Text("导入截图后自动生成卡片"))
-            } else {
-                List {
-                    ForEach(filteredItems) { item in
-                        NavigationLink(destination: CardDetailView(item: item)) {
-                            CardRowView(item: item)
+                if filteredItems.isEmpty {
+                    ContentUnavailableView("暂无卡片", systemImage: "tray", description: Text("导入截图后自动生成卡片"))
+                } else {
+                    VStack(spacing: DesignTokens.Spacing.sm) {
+                        ForEach(filteredItems) { item in
+                            NavigationLink(destination: CardDetailView(item: item)) {
+                                CardRowView(item: item)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
-                .listStyle(.plain)
             }
+            .padding(.horizontal, DesignTokens.Spacing.sm)
+            .padding(.bottom, DesignTokens.Spacing.xl)
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.9), value: filteredItems.count)
         .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "搜索内容或标签")
     }
 
@@ -63,18 +69,21 @@ struct CardRowView: View {
     let item: ScreenshotItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
                 .font(.caption)
                 .foregroundColor(.secondary)
             Text(item.summary?.isEmpty == false ? item.summary! : item.ocrText)
+                .font(.headline)
+                .foregroundColor(.primary)
                 .lineLimit(2)
             if !item.tags.isEmpty {
                 Text(item.tags.joined(separator: " · "))
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, minHeight: DesignTokens.Sizes.listRowMinHeight, alignment: .leading)
+        .glassCard()
     }
 }

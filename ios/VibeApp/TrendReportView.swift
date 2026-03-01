@@ -4,31 +4,56 @@ struct TrendReportView: View {
     let report: TrendReport
 
     var body: some View {
-        List {
-            Section("时间范围") {
-                Text("\(report.periodStart.formatted(date: .abbreviated, time: .omitted)) - \(report.periodEnd.formatted(date: .abbreviated, time: .omitted))")
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                    Text("时间范围")
+                        .font(.headline)
+                    Text("\(report.periodStart.formatted(date: .abbreviated, time: .omitted)) - \(report.periodEnd.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                }
+                .glassCard()
 
-            Section("总结") {
-                Text(report.summary)
-            }
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                    Text("总结")
+                        .font(.headline)
+                    Text(report.summary)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                }
+                .glassCard()
 
-            if !report.similarities.isEmpty {
-                Section("相似点") {
-                    ForEach(report.similarities, id: \.self) { item in
-                        Text(item)
+                if !report.similarities.isEmpty {
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                        Text("相似点")
+                            .font(.headline)
+                        ForEach(report.similarities, id: \.self) { item in
+                            Text(item)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                        }
                     }
+                    .glassCard()
+                }
+
+                if !report.trends.isEmpty {
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                        Text("趋势")
+                            .font(.headline)
+                        ForEach(report.trends, id: \.self) { item in
+                            Text(item)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                        }
+                    }
+                    .glassCard()
                 }
             }
-
-            if !report.trends.isEmpty {
-                Section("趋势") {
-                    ForEach(report.trends, id: \.self) { item in
-                        Text(item)
-                    }
-                }
-            }
+            .padding(.horizontal, DesignTokens.Spacing.sm)
+            .padding(.bottom, DesignTokens.Spacing.xl)
         }
-        .navigationTitle("AI 复盘")
+        .navigationTitle("趋势报告")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
