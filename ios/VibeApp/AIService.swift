@@ -11,7 +11,7 @@ final class AIService {
 
     private init() {}
 
-    private let baseURL = URL(string: "http://localhost:3000")!
+    private let baseURL = URL(string: "http://192.168.31.62:3000")!
     private let apiKeyKey = "vibeapp_openai_key"
 
     func analyze(texts: [String]) async throws -> AIAnalysisResponse {
