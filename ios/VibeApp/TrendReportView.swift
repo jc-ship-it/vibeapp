@@ -13,9 +13,17 @@ struct TrendReportView: View {
                 Text(report.summary)
             }
 
-            if !report.highlights.isEmpty {
-                Section("趋势与相似点") {
-                    ForEach(report.highlights, id: \.self) { item in
+            if !report.similarities.isEmpty {
+                Section("相似点") {
+                    ForEach(report.similarities, id: \.self) { item in
+                        Text(item)
+                    }
+                }
+            }
+
+            if !report.trends.isEmpty {
+                Section("趋势") {
+                    ForEach(report.trends, id: \.self) { item in
                         Text(item)
                     }
                 }

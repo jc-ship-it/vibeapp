@@ -30,8 +30,10 @@ app.post("/analyze", async (req, res) => {
       return res.status(400).json({ error: "texts 或 images 不能为空" });
     }
 
-    const result = openAiKey
-      ? await analyzeWithOpenAI(textList, imageList, metadata)
+    const requestKey = (req.get("x-openai-key") || "").trim();
+    const effectiveKey = requestKey || openAiKey;
+    const result = effectiveKey
+      ? await analyzeWithOpenAI(textList, imageList, metadata, effectiveKey)
       : fallbackAnalyze(textList, imageList);
 
     res.json(result);
@@ -44,7 +46,7 @@ app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
 
-async function analyzeWithOpenAI(texts, images, metadata) {
+async function analyzeWithOpenAI(texts, images, metadata, apiKey) {
   const prompt = [
     "你是信息整理助手。请根据截图 OCR 文本进行整理。",
     "只返回 JSON，格式如下：",
@@ -93,7 +95,7 @@ async function analyzeWithOpenAI(texts, images, metadata) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${openAiKey}`
+      Authorization: `Bearer ${apiKey}`
     },
     body: JSON.stringify(body)
   });

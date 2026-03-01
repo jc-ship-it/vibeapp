@@ -110,7 +110,8 @@ struct HomeView: View {
                 periodStart: store.items.last?.createdAt ?? Date(),
                 periodEnd: store.items.first?.createdAt ?? Date(),
                 summary: result.summary,
-                highlights: result.similarities + result.trends
+                similarities: result.similarities,
+                trends: result.trends
             )
             store.setReport(report)
             showReport = true

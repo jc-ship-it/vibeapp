@@ -12,12 +12,17 @@ final class AIService {
     private init() {}
 
     private let baseURL = URL(string: "http://localhost:3000")!
+    private let apiKeyKey = "vibeapp_openai_key"
 
     func analyze(texts: [String]) async throws -> AIAnalysisResponse {
         let url = baseURL.appendingPathComponent("analyze")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let apiKey = UserDefaults.standard.string(forKey: apiKeyKey),
+           !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            request.setValue(apiKey, forHTTPHeaderField: "X-OpenAI-Key")
+        }
 
         let body = ["texts": texts]
         request.httpBody = try JSONEncoder().encode(body)

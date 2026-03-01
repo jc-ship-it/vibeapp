@@ -5,6 +5,8 @@ struct AccountView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var sync: SyncSettings
     @State private var signInError: String?
+    @AppStorage("vibeapp_openai_key") private var apiKey: String = ""
+    @State private var showApiKey = false
 
     var body: some View {
         List {
@@ -40,6 +42,32 @@ struct AccountView: View {
                 if let signInError {
                     Text(signInError)
                         .foregroundColor(.red)
+                }
+            }
+
+            Section("API 配置") {
+                if showApiKey {
+                    TextField("请输入 OpenAI API Key", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } else {
+                    SecureField("请输入 OpenAI API Key", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+
+                Button(showApiKey ? "隐藏密钥" : "显示密钥") {
+                    showApiKey.toggle()
+                }
+
+                if apiKey.isEmpty {
+                    Text("未配置时将使用服务器默认 Key（如有）。")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("已保存到本地，仅用于本机请求。")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
 
