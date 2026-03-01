@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Vibe App 移动端 Demo</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b0c10;
+        --card: #151823;
+        --text: #f5f7ff;
+        --muted: #9aa3b2;
+        --accent: #6aa9ff;
+        --border: #2a3042;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f8fb;
+          --card: #ffffff;
+          --text: #111827;
+          --muted: #6b7280;
+          --accent: #2563eb;
+          --border: #e5e7eb;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 20px 16px 96px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      header {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      label {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      textarea,
+      input {
+        width: 100%;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+      textarea {
+        min-height: 140px;
+        resize: vertical;
+      }
+      button {
+        border: none;
+        background: var(--accent);
+        color: #fff;
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .file-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ghost {
+        background: transparent;
+        border: 1px dashed var(--border);
+        color: var(--text);
+      }
+      .preview {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        display: none;
+      }
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+      }
+      .preview-grid img {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+      }
+      .helper {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .result {
+        white-space: pre-wrap;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 13px;
+        color: var(--text);
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .tabbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--card);
+        border-top: 1px solid var(--border);
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        padding: 8px 10px 12px;
+      }
+      .tabbar button {
+        background: transparent;
+        color: var(--muted);
+        border-radius: 10px;
+        padding: 8px 6px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .tabbar button.active {
+        color: var(--accent);
+        border: 1px solid var(--border);
+        background: rgba(106, 169, 255, 0.12);
+      }
+      .tab-view {
+        display: none;
+      }
+      .tab-view.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Vibe App 移动端 Demo</h1>
+        <p>
+          在手机浏览器打开本页面，粘贴或输入多段截图文字，点“生成摘要”即可
+          测试分析服务。
+        </p>
+      </header>
+
+      <section id="tab-home" class="tab-view active">
+        <section class="card">
+          <span class="pill">输入</span>
+          <label for="texts">截图文字（多段用空行分隔）</label>
+          <textarea id="texts" placeholder="例如：&#10;今天喝了拿铁&#10;&#10;今天喝了冰美式"></textarea>
+          <label for="imageInput">相册图片（可选）</label>
+          <div class="file-row">
+            <input id="imageInput" type="file" accept="image/*" multiple />
+            <button id="pickImage" class="ghost" type="button">选择相册图片</button>
+            <div id="imageCount" class="pill">未选择图片</div>
+            <div id="imagePreview" class="preview-grid"></div>
+            <div id="ocrStatus" class="helper">OCR 将在本地完成</div>
+          </div>
+          <label for="scene">场景备注（可选）</label>
+          <input id="scene" placeholder="例如：咖啡店点评截图" />
+          <button id="analyze">生成摘要</button>
+        </section>
+
+        <section class="card">
+          <span class="pill">结果</span>
+          <div id="status" class="pill">等待输入</div>
+          <div id="result" class="result"></div>
+        </section>
+
+        <section class="card">
+          <span class="pill">提示</span>
+          <p>默认调用本地服务 <code>/analyze</code>。</p>
+          <p>
+            若未配置 OpenAI Key，会返回本地关键词摘要（用于快速演示）。
+          </p>
+          <p class="helper">
+            图片识别使用浏览器本地 OCR，首次加载模型可能稍慢。
+          </p>
+        </section>
+      </section>
+
+      <section id="tab-trends" class="tab-view">
+        <section class="card">
+          <span class="pill">趋势分析</span>
+          <p>请在首页导入截图并生成摘要后查看。</p>
+          <div id="trendResult" class="result"></div>
+        </section>
+      </section>
+
+      <section id="tab-history" class="tab-view">
+        <section class="card">
+          <span class="pill">历史记录</span>
+          <p class="helper">Demo 仅展示最近一次分析结果。</p>
+          <div id="historyResult" class="result"></div>
+        </section>
+      </section>
+
+      <section id="tab-account" class="tab-view">
+        <section class="card">
+          <span class="pill">我的账号</span>
+          <p>登录与同步功能将在 iOS App 中提供。</p>
+          <div class="helper">Web Demo 仅用于体验核心流程。</div>
+        </section>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="active" data-tab="home">首页</button>
+      <button data-tab="trends">趋势分析</button>
+      <button data-tab="history">历史记录</button>
+      <button data-tab="account">我的账号</button>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
+    <script>
+      const button = document.getElementById("analyze");
+      const textsInput = document.getElementById("texts");
+      const sceneInput = document.getElementById("scene");
+      const resultEl = document.getElementById("result");
+      const statusEl = document.getElementById("status");
+      const imageInput = document.getElementById("imageInput");
+      const pickImageButton = document.getElementById("pickImage");
+      const imagePreview = document.getElementById("imagePreview");
+      const imageCount = document.getElementById("imageCount");
+      const ocrStatus = document.getElementById("ocrStatus");
+      const trendResult = document.getElementById("trendResult");
+      const historyResult = document.getElementById("historyResult");
+      const tabButtons = document.querySelectorAll(".tabbar button");
+      const tabViews = {
+        home: document.getElementById("tab-home"),
+        trends: document.getElementById("tab-trends"),
+        history: document.getElementById("tab-history"),
+        account: document.getElementById("tab-account")
+      };
+      let selectedFiles = [];
+      let ocrTexts = [];
+      let isOcrRunning = false;
+      let lastAnalysis = null;
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function switchTab(tab) {
+        Object.keys(tabViews).forEach((key) => {
+          tabViews[key].classList.toggle("active", key === tab);
+        });
+        tabButtons.forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.tab === tab);
+        });
+      }
+
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          switchTab(btn.dataset.tab);
+        });
+      });
+
+      pickImageButton.addEventListener("click", () => {
+        imageInput.click();
+      });
+
+      imageInput.addEventListener("change", async () => {
+        const files = Array.from(imageInput.files || []);
+        if (files.length === 0) {
+          imagePreview.innerHTML = "";
+          imageCount.textContent = "未选择图片";
+          selectedFiles = [];
+          ocrTexts = [];
+          ocrStatus.textContent = "OCR 将在本地完成";
+          return;
+        }
+
+        selectedFiles = files;
+        ocrTexts = [];
+        imagePreview.innerHTML = "";
+        imageCount.textContent = `已选择 ${files.length} 张图片`;
+        for (const file of files) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const img = document.createElement("img");
+            img.src = reader.result;
+            imagePreview.appendChild(img);
+          };
+          reader.readAsDataURL(file);
+        }
+
+        await runOcr(files);
+      });
+
+      async function runOcr(files) {
+        if (!window.Tesseract) {
+          ocrStatus.textContent = "OCR 组件加载失败";
+          return;
+        }
+        isOcrRunning = true;
+        button.disabled = true;
+        setStatus("OCR 识别中...");
+        ocrStatus.textContent = "识别中，请稍候...";
+
+        const results = [];
+        for (let i = 0; i < files.length; i += 1) {
+          const file = files[i];
+          ocrStatus.textContent = `正在识别第 ${i + 1} / ${files.length} 张`;
+          try {
+            const { data } = await Tesseract.recognize(file, "chi_sim+eng", {
+              logger: (m) => {
+                if (m?.status === "recognizing text" && m?.progress != null) {
+                  const percent = Math.round(m.progress * 100);
+                  ocrStatus.textContent = `正在识别第 ${i + 1} / ${
+                    files.length
+                  } 张（${percent}%）`;
+                }
+              }
+            });
+            if (data?.text) {
+              results.push(data.text.trim());
+            }
+          } catch (err) {
+            results.push("");
+          }
+        }
+
+        ocrTexts = results.filter((t) => t);
+        if (ocrTexts.length > 0) {
+          const joined = ocrTexts.join("\n\n");
+          textsInput.value = textsInput.value.trim()
+            ? `${textsInput.value.trim()}\n\n${joined}`
+            : joined;
+          ocrStatus.textContent = `识别完成，共 ${ocrTexts.length} 段文本`;
+        } else {
+          ocrStatus.textContent = "未识别到文字";
+        }
+
+        isOcrRunning = false;
+        button.disabled = false;
+        setStatus("等待输入");
+      }
+
+      button.addEventListener("click", async () => {
+        const raw = textsInput.value.trim();
+        if (isOcrRunning) {
+          setStatus("请等待 OCR 完成");
+          return;
+        }
+        if (!raw && selectedFiles.length === 0) {
+          setStatus("请先输入文本或选择图片");
+          return;
+        }
+
+        const texts = raw
+          ? raw.split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean)
+          : [];
+        const metadata = {
+          scene: sceneInput.value.trim(),
+          source: "mobile-demo"
+        };
+
+        button.disabled = true;
+        setStatus("分析中...");
+        resultEl.textContent = "";
+
+        try {
+          const res = await fetch("/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ texts, metadata })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data?.error || "请求失败");
+          }
+          resultEl.textContent = JSON.stringify(data, null, 2);
+          lastAnalysis = data;
+          trendResult.textContent = JSON.stringify(data, null, 2);
+          historyResult.textContent = JSON.stringify(data, null, 2);
+          setStatus("完成");
+        } catch (err) {
+          setStatus("出错");
+          resultEl.textContent = String(err?.message || err);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

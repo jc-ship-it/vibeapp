@@ -4,6 +4,11 @@ struct TimelineView: View {
     @EnvironmentObject private var store: ScreenshotStore
     @State private var searchText = ""
     @State private var selectedTag = "全部"
+    let title: String
+
+    init(title: String = "时间线") {
+        self.title = title
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -27,7 +32,7 @@ struct TimelineView: View {
                 .listStyle(.plain)
             }
         }
-        .navigationTitle("时间线")
+        .navigationTitle(title)
         .searchable(text: $searchText, prompt: "搜索内容或标签")
     }
 
