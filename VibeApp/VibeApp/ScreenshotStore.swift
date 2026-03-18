@@ -34,6 +34,17 @@ final class ScreenshotStore: ObservableObject {
         saveItems()
     }
 
+    func deleteItems(ids: Set<UUID>) {
+        guard !ids.isEmpty else { return }
+        items.removeAll { ids.contains($0.id) }
+        saveItems()
+    }
+
+    func deleteAllItems() {
+        items.removeAll()
+        saveItems()
+    }
+
     func setReport(_ report: TrendReport) {
         latestReport = report
         reports.insert(report, at: 0)

@@ -5,6 +5,10 @@ struct TimelineView: View {
     @EnvironmentObject private var store: ScreenshotStore
     @State private var searchText = ""
     @State private var selectedTag = "全部"
+    @State private var isManaging = false
+    @State private var selectedItemIDs: Set<UUID> = []
+    @State private var showDeleteAlert = false
+    @State private var deleteAlertMessage = ""
     let title: String
 
     init(title: String = "历史") {
@@ -28,6 +32,8 @@ struct TimelineView: View {
                         description: Text("在首页导入截图后，这里会按时间展示。")
                     )
                 } else {
+                    managePanel
+
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                         ForEach(sections, id: \.date) { section in
                             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -37,13 +43,28 @@ struct TimelineView: View {
 
                                 VStack(spacing: DesignTokens.Spacing.sm) {
                                     ForEach(Array(section.items.enumerated()), id: \.element.id) { idx, item in
-                                        NavigationLink(destination: CardDetailView(item: item)) {
-                                            TimelineRow(
-                                                item: item,
-                                                showLine: idx != section.items.count - 1
-                                            )
+                                        let isLast = idx == section.items.count - 1
+                                        if isManaging {
+                                            Button {
+                                                toggleSelection(item.id)
+                                            } label: {
+                                                TimelineRow(
+                                                    item: item,
+                                                    showLine: !isLast,
+                                                    isSelected: selectedItemIDs.contains(item.id)
+                                                )
+                                            }
+                                            .buttonStyle(.plain)
+                                        } else {
+                                            NavigationLink(destination: CardDetailView(item: item)) {
+                                                TimelineRow(
+                                                    item: item,
+                                                    showLine: !isLast,
+                                                    isSelected: false
+                                                )
+                                            }
+                                            .buttonStyle(.plain)
                                         }
-                                        .buttonStyle(.plain)
                                     }
                                 }
                             }
@@ -58,6 +79,55 @@ struct TimelineView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "搜索内容或标签")
+        .alert("删除", isPresented: $showDeleteAlert) {
+            Button("取消", role: .cancel) {}
+            Button("删除", role: .destructive) {
+                store.deleteItems(ids: selectedItemIDs)
+                isManaging = false
+                selectedItemIDs.removeAll()
+            }
+        } message: {
+            Text(deleteAlertMessage)
+        }
+    }
+
+    private var managePanel: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Button(isManaging ? "完成" : "管理") {
+                    if isManaging {
+                        isManaging = false
+                        selectedItemIDs.removeAll()
+                    } else {
+                        isManaging = true
+                    }
+                }
+                .buttonStyle(.bordered)
+
+                Spacer()
+
+                if isManaging {
+                    Button(allVisibleSelected ? "取消全选" : "全选") {
+                        toggleSelectAllVisible()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        requestDeleteSelected()
+                    } label: {
+                        HStack(spacing: DesignTokens.Spacing.xs) {
+                            Image(systemName: "trash")
+                            Text("删除")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .foregroundColor(.red)
+                    .disabled(selectedItemIDs.isEmpty)
+                }
+            }
+        }
+        .glassCard()
+        .padding(.bottom, DesignTokens.Spacing.sm)
     }
 
     private var availableTags: [String] {
@@ -80,6 +150,14 @@ struct TimelineView: View {
             }
             return matchesTag && matchesSearch
         }
+    }
+
+    private var visibleItemIDs: Set<UUID> {
+        Set(filteredItems.map(\.id))
+    }
+
+    private var allVisibleSelected: Bool {
+        !visibleItemIDs.isEmpty && selectedItemIDs == visibleItemIDs
     }
 
     private struct DateSection: Identifiable {
@@ -117,18 +195,53 @@ struct TimelineView: View {
         formatter.dateFormat = "yyyy年M月d日"
         return formatter.string(from: date)
     }
+
+    private func toggleSelection(_ id: UUID) {
+        if selectedItemIDs.contains(id) {
+            selectedItemIDs.remove(id)
+        } else {
+            selectedItemIDs.insert(id)
+        }
+    }
+
+    private func toggleSelectAllVisible() {
+        if allVisibleSelected {
+            selectedItemIDs.removeAll()
+        } else {
+            selectedItemIDs = visibleItemIDs
+        }
+    }
+
+    private func requestDeleteSelected() {
+        guard !selectedItemIDs.isEmpty else { return }
+        let isAll = allVisibleSelected
+        deleteAlertMessage = isAll
+            ? "是否全部都要删除？"
+            : "是否删除选中的 \(selectedItemIDs.count) 条？"
+        showDeleteAlert = true
+    }
 }
 
 private struct TimelineRow: View {
     let item: ScreenshotItem
     let showLine: Bool
+    let isSelected: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
-            TimelineMarker(showLine: showLine)
-                .padding(.top, 16)
+        ZStack(alignment: .topTrailing) {
+            HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
+                TimelineMarker(showLine: showLine)
+                    .padding(.top, 16)
 
-            CardRowView(item: item)
+                CardRowView(item: item)
+            }
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.primary)
+                    .padding(DesignTokens.Spacing.sm)
+                    .font(.system(size: 22, weight: .bold))
+            }
         }
     }
 }
