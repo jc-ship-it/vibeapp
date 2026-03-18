@@ -13,7 +13,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text("Vibe")
+                        Text("Peeqi")
                             .font(.largeTitle.bold())
                             .foregroundColor(.primary)
                         Text("把截图变成可回顾的洞察。")
