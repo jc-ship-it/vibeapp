@@ -4,7 +4,7 @@ import UIKit
 struct TimelineView: View {
     @EnvironmentObject private var store: ScreenshotStore
     @State private var searchText = ""
-    @State private var selectedTag = "全部"
+    @State private var selectedTag = ""
     @State private var isManaging = false
     @State private var selectedItemIDs: Set<UUID> = []
     @State private var showDeleteAlert = false
@@ -18,12 +18,7 @@ struct TimelineView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-                Picker("标签", selection: $selectedTag) {
-                    ForEach(availableTags, id: \.self) { tag in
-                        Text(tag).tag(tag)
-                    }
-                }
-                .pickerStyle(.segmented)
+                tagFilterBar
 
                 if filteredItems.isEmpty {
                     ContentUnavailableView("暂无历史", systemImage: "tray", description: Text("在首页导入截图后，这里会按时间展示。"))
@@ -73,15 +68,35 @@ struct TimelineView: View {
         }
     }
 
-    private var availableTags: [String] {
-        let tags = store.items.flatMap { $0.tags }
-        let unique = Array(Set(tags)).sorted()
-        return ["全部"] + unique
+    private var tagCounts: [String: Int] {
+        var counts: [String: Int] = [:]
+        for item in store.items {
+            for tag in item.tags {
+                counts[tag, default: 0] += 1
+            }
+        }
+        return counts
+    }
+
+    private var topTags: [String] {
+        tagCounts
+            .sorted { $0.value > $1.value }
+            .map(\.key)
+            .prefix(8)
+            .map { $0 }
+    }
+
+    private var moreTags: [String] {
+        let sortedKeys = tagCounts
+            .sorted { $0.value > $1.value }
+            .map(\.key)
+        let topSet = Set(topTags)
+        return sortedKeys.filter { !topSet.contains($0) }.prefix(20).map { $0 }
     }
 
     private var filteredItems: [ScreenshotItem] {
         store.items.filter { item in
-            let matchesTag = selectedTag == "全部" || item.tags.contains(selectedTag)
+            let matchesTag = selectedTag.isEmpty || item.tags.contains(selectedTag)
             let matchesSearch: Bool
             if searchText.isEmpty {
                 matchesSearch = true
@@ -132,13 +147,58 @@ struct TimelineView: View {
                             Text("删除")
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .foregroundColor(.red)
                     .disabled(selectedItemIDs.isEmpty)
                 }
             }
         }
-        .glassCard()
+        .padding(.bottom, DesignTokens.Spacing.sm)
+    }
+
+    private var tagFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DesignTokens.Spacing.xs) {
+                TagChip(label: "不限", isSelected: selectedTag.isEmpty) {
+                    selectedTag = ""
+                }
+
+                ForEach(topTags, id: \.self) { tag in
+                    TagChip(label: shortenTag(tag, maxCount: 6), isSelected: selectedTag == tag) {
+                        selectedTag = tag
+                    }
+                }
+
+                if !moreTags.isEmpty {
+                    Menu {
+                        ForEach(moreTags, id: \.self) { tag in
+                            Button { selectedTag = tag } label: {
+                                Text(shortenTag(tag, maxCount: 6))
+                            }
+                        }
+                        Button { selectedTag = "" } label: { Text("不限") }
+                    } label: {
+                        Text("更多")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, DesignTokens.Spacing.sm)
+                            .padding(.vertical, DesignTokens.Spacing.xs / 2)
+                            .background(
+                                Capsule()
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
+                    }
+                }
+            }
+            .padding(.top, DesignTokens.Spacing.xs)
+            .padding(.bottom, -DesignTokens.Spacing.xs)
+        }
+    }
+
+    private func shortenTag(_ text: String, maxCount: Int) -> String {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.count > maxCount else { return t }
+        return String(t.prefix(maxCount))
     }
 
     private func toggleSelection(_ id: UUID) {
@@ -181,6 +241,12 @@ struct CardRowView: View {
         return Image(uiImage: uiImage)
     }
 
+    private func shortenTag(_ text: String, maxCount: Int) -> String {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.count > maxCount else { return t }
+        return String(t.prefix(maxCount))
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
             if let thumbnail {
@@ -201,8 +267,9 @@ struct CardRowView: View {
                     .foregroundColor(.primary)
                     .lineLimit(2)
                 if !item.tags.isEmpty {
-                    Text(item.tags.joined(separator: " · "))
-                        .font(.subheadline)
+                    let tags = item.tags.prefix(3).map { shortenTag($0, maxCount: 5) }
+                    Text(tags.joined(separator: " · "))
+                        .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
@@ -228,5 +295,26 @@ private struct SelectableCardRowView: View {
                     .font(.system(size: 22, weight: .bold))
             }
         }
+    }
+}
+
+private struct TagChip: View {
+    let label: String
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Text(label)
+                .font(.callout)
+                .foregroundColor(isSelected ? .primary : .secondary)
+                .padding(.horizontal, DesignTokens.Spacing.sm)
+                .padding(.vertical, DesignTokens.Spacing.xs / 2)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? Color.secondary.opacity(0.18) : Color.secondary.opacity(0.12))
+                )
+        }
+        .buttonStyle(.plain)
     }
 }

@@ -108,10 +108,11 @@ final class AIService {
             "你是信息整理助手。请根据一段时间内的多条截图 OCR 文本，生成复盘用的趋势报告。",
             "只返回 JSON，格式如下：",
             "{",
-            '  "summary": "整体摘要（2-3 句）",',
-            '  "similarities": ["用作标签的高频主题1", "高频主题2"],',
-            '  "trends": ["趋势1（一句话）", "趋势2（一句话）"]',
+            "  \"summary\": \"整体摘要（2-3 句）\",",
+            "  \"similarities\": [\"短主题标签1\", \"短主题标签2\"],",
+            "  \"trends\": [\"趋势1（一句话）\", \"趋势2（一句话）\"]",
             "}",
+            "约束：similarities 必须是短标签（每个不超过 6 个字符/字），不要长句；trends 每个最多 18 个字符。",
             "不要输出额外文本。",
             "",
             "输入文本：",
@@ -146,10 +147,11 @@ final class AIService {
             "你是信息整理助手，负责为单条截图生成摘要和标签。",
             "只返回 JSON，格式如下：",
             "{",
-            '  "summary": "一句话摘要",',
-            '  "tags": ["标签1", "标签2"],',
-            '  "keywords": ["关键词1", "关键词2", "关键词3"]',
+            "  \"summary\": \"一句话摘要\",",
+            "  \"tags\": [\"标签1\", \"标签2\"],",
+            "  \"keywords\": [\"关键词1\", \"关键词2\", \"关键词3\"]",
             "}",
+            "约束：tags 必须是短标签（每个不超过 6 个字符/字，2-4 个）；keywords 必须是关键词短语（每个不超过 10 个字符，3-6 个）。",
             "不要输出额外文本。",
             "",
             "截图 OCR 文本：",
@@ -263,7 +265,8 @@ final class AIService {
         let tokens = tokenize(text)
         let top = mostFrequent(tokens, limit: 5)
         let summary = top.isEmpty ? "本地摘要：内容较短。" : "本地摘要：包含 \(top.joined(separator: "、")) 等关键词。"
-        return AICardAnalysisResponse(summary: summary, tags: top.prefix(3).map(String.init), keywords: top)
+        let tags = top.prefix(3)
+        return AICardAnalysisResponse(summary: summary, tags: tags.map { $0 }, keywords: top)
     }
 
     private func tokenize(_ input: String) -> [String] {

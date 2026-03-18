@@ -49,7 +49,8 @@ struct CardDetailView: View {
                             .font(.callout)
                             .foregroundColor(.secondary)
                     } else {
-                        Text(item.tags.joined(separator: " · "))
+                        let tags = item.tags.prefix(3).map { shorten($0, maxCount: 6) }
+                        Text(tags.joined(separator: " · "))
                             .font(.body)
                             .foregroundColor(.primary)
                     }
@@ -64,7 +65,8 @@ struct CardDetailView: View {
                             .font(.callout)
                             .foregroundColor(.secondary)
                     } else {
-                        Text(item.keywords.joined(separator: " · "))
+                        let keywords = item.keywords.prefix(4).map { shorten($0, maxCount: 6) }
+                        Text(keywords.joined(separator: " · "))
                             .font(.body)
                             .foregroundColor(.primary)
                     }
@@ -118,5 +120,11 @@ struct CardDetailView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func shorten(_ text: String, maxCount: Int) -> String {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.count > maxCount else { return t }
+        return String(t.prefix(maxCount))
     }
 }
