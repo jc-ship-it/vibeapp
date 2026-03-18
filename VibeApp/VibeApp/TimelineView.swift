@@ -214,11 +214,16 @@ struct TimelineView: View {
 
     private func requestDeleteSelected() {
         guard !selectedItemIDs.isEmpty else { return }
+        dismissKeyboard()
         let isAll = allVisibleSelected
         deleteAlertMessage = isAll
             ? "是否全部都要删除？"
             : "是否删除选中的 \(selectedItemIDs.count) 条？"
         showDeleteAlert = true
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
