@@ -12,9 +12,9 @@ struct AccountView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                    Text("我的账号")
+                    Text("我的")
                         .font(.largeTitle.bold())
-                    Text("管理登录与数据同步设置。")
+                    Text("管理账号、隐私与应用设置。")
                         .font(.callout)
                         .foregroundColor(.secondary)
                 }

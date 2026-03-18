@@ -42,18 +42,38 @@ app.post("/analyze", async (req, res) => {
   }
 });
 
+app.post("/analyze-card", async (req, res) => {
+  try {
+    const { text = "", metadata = {} } = req.body || {};
+    const content = typeof text === "string" ? text.trim() : "";
+    if (!content) {
+      return res.status(400).json({ error: "text 不能为空" });
+    }
+
+    const requestKey = (req.get("x-openai-key") || "").trim();
+    const effectiveKey = requestKey || openAiKey;
+    const result = effectiveKey
+      ? await analyzeCardWithOpenAI(content, metadata, effectiveKey)
+      : fallbackAnalyzeCard(content);
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error?.message || "卡片分析失败" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
 
 async function analyzeWithOpenAI(texts, images, metadata, apiKey) {
   const prompt = [
-    "你是信息整理助手。请根据截图 OCR 文本进行整理。",
+    "你是信息整理助手。请根据一段时间内的多条截图 OCR 文本，生成复盘用的趋势报告。",
     "只返回 JSON，格式如下：",
     "{",
-    '  "summary": "整体摘要",',
-    '  "similarities": ["相似点1", "相似点2"],',
-    '  "trends": ["趋势1", "趋势2"]',
+    '  "summary": "整体摘要（2-3 句）",',
+    '  "similarities": ["用作标签的高频主题1", "高频主题2"],',
+    '  "trends": ["趋势1（一句话）", "趋势2（一句话）"]',
     "}",
     "不要输出额外文本。",
     "",
@@ -165,6 +185,98 @@ function fallbackAnalyze(texts, images) {
     summary: "未配置 OpenAI，返回本地关键词摘要。",
     similarities: top.length ? ["高频关键词: " + top.join(", ")] : [],
     trends: []
+  };
+}
+
+function fallbackAnalyzeCard(text) {
+  const words = text
+    .replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 1);
+
+  const counts = new Map();
+  for (const w of words) {
+    counts.set(w, (counts.get(w) || 0) + 1);
+  }
+  const top = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([w]) => w);
+
+  return {
+    summary: top.length ? `本地摘要：包含 ${top.join("、")} 等关键词。` : "本地摘要：内容较短。",
+    tags: top,
+    keywords: top
+  };
+}
+
+async function analyzeCardWithOpenAI(text, metadata, apiKey) {
+  const prompt = [
+    "你是信息整理助手，负责为单条截图生成摘要和标签。",
+    "只返回 JSON，格式如下：",
+    "{",
+    '  "summary": "一句话摘要",',
+    '  "tags": ["标签1", "标签2"],',
+    '  "keywords": ["关键词1", "关键词2", "关键词3"]',
+    "}",
+    "不要输出额外文本。",
+    "",
+    "截图 OCR 文本：",
+    text,
+    "",
+    "元数据：",
+    JSON.stringify(metadata)
+  ].join("\n");
+
+  const endpoint = buildOpenAiEndpoint(openAiBaseUrl);
+  const isChatCompletions = endpoint.endsWith("/v1/chat/completions");
+
+  let body;
+  if (isChatCompletions) {
+    body = {
+      model: openAiModel,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      max_tokens: 300
+    };
+  } else {
+    body = {
+      model: openAiModel,
+      input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+      max_output_tokens: 300
+    };
+  }
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    const textBody = await response.text();
+    throw new Error(`OpenAI 卡片请求失败: ${textBody}`);
+  }
+
+  const data = await response.json();
+  const outputText =
+    data.output_text ||
+    data.output?.[0]?.content?.[0]?.text ||
+    data.choices?.[0]?.message?.content ||
+    "";
+
+  const parsed = safeParseJSON(outputText);
+  if (!parsed) {
+    throw new Error("OpenAI 返回内容无法解析为 JSON");
+  }
+
+  return {
+    summary: parsed.summary || "",
+    tags: parsed.tags || [],
+    keywords: parsed.keywords || []
   };
 }
 

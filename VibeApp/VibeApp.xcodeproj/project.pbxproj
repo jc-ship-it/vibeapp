@@ -7,24 +7,24 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		0B1EF6BD2F535760007C8438 /* VibeApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B1EF6BD2F535760007C8438 /* Peeqi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Peeqi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		0B3E95272F54818400FBD5C9 /* Exceptions for "VibeApp" folder in "VibeApp" target */ = {
+		0B3E95272F54818400FBD5C9 /* Exceptions for "Peeqi" folder in "Peeqi" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 0B1EF6BC2F535760007C8438 /* VibeApp */;
+			target = 0B1EF6BC2F535760007C8438 /* Peeqi */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		0B1EF6BF2F535760007C8438 /* VibeApp */ = {
+		0B1EF6BF2F535760007C8438 /* Peeqi */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				0B3E95272F54818400FBD5C9 /* Exceptions for "VibeApp" folder in "VibeApp" target */,
+				0B3E95272F54818400FBD5C9 /* Exceptions for "Peeqi" folder in "Peeqi" target */,
 			);
 			path = VibeApp;
 			sourceTree = "<group>";
@@ -45,7 +45,7 @@
 		0B1EF6B42F535760007C8438 = {
 			isa = PBXGroup;
 			children = (
-				0B1EF6BF2F535760007C8438 /* VibeApp */,
+				0B1EF6BF2F535760007C8438 /* Peeqi */,
 				0B1EF6BE2F535760007C8438 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -53,7 +53,7 @@
 		0B1EF6BE2F535760007C8438 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0B1EF6BD2F535760007C8438 /* VibeApp.app */,
+				0B1EF6BD2F535760007C8438 /* Peeqi.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,9 +61,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0B1EF6BC2F535760007C8438 /* VibeApp */ = {
+		0B1EF6BC2F535760007C8438 /* Peeqi */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0B1EF6C82F535760007C8438 /* Build configuration list for PBXNativeTarget "VibeApp" */;
+			buildConfigurationList = 0B1EF6C82F535760007C8438 /* Build configuration list for PBXNativeTarget "Peeqi" */;
 			buildPhases = (
 				0B1EF6B92F535760007C8438 /* Sources */,
 				0B1EF6BA2F535760007C8438 /* Frameworks */,
@@ -74,13 +74,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0B1EF6BF2F535760007C8438 /* VibeApp */,
+				0B1EF6BF2F535760007C8438 /* Peeqi */,
 			);
-			name = VibeApp;
+			name = Peeqi;
 			packageProductDependencies = (
 			);
-			productName = VibeApp;
-			productReference = 0B1EF6BD2F535760007C8438 /* VibeApp.app */;
+			productName = Peeqi;
+			productReference = 0B1EF6BD2F535760007C8438 /* Peeqi.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -98,7 +98,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 0B1EF6B82F535760007C8438 /* Build configuration list for PBXProject "VibeApp" */;
+			buildConfigurationList = 0B1EF6B82F535760007C8438 /* Build configuration list for PBXProject "Peeqi" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -112,7 +112,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				0B1EF6BC2F535760007C8438 /* VibeApp */,
+				0B1EF6BC2F535760007C8438 /* Peeqi */,
 			);
 		};
 /* End PBXProject section */
@@ -280,7 +280,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jc.VibeApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jc.Peeqi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -315,7 +315,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jc.VibeApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jc.Peeqi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -330,7 +330,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0B1EF6B82F535760007C8438 /* Build configuration list for PBXProject "VibeApp" */ = {
+		0B1EF6B82F535760007C8438 /* Build configuration list for PBXProject "Peeqi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0B1EF6C62F535760007C8438 /* Debug */,
@@ -339,7 +339,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0B1EF6C82F535760007C8438 /* Build configuration list for PBXNativeTarget "VibeApp" */ = {
+		0B1EF6C82F535760007C8438 /* Build configuration list for PBXNativeTarget "Peeqi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0B1EF6C92F535760007C8438 /* Debug */,

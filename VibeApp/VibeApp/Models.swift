@@ -70,7 +70,19 @@ struct TrendReport: Identifiable, Codable {
     let periodStart: Date
     let periodEnd: Date
     let summary: String
-    let highlights: [String]
+    let similarities: [String]
+    let trends: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case createdAt
+        case periodStart
+        case periodEnd
+        case summary
+        case similarities
+        case trends
+        case highlights
+    }
 
     init(
         id: UUID = UUID(),
@@ -78,13 +90,45 @@ struct TrendReport: Identifiable, Codable {
         periodStart: Date,
         periodEnd: Date,
         summary: String,
-        highlights: [String]
+        similarities: [String],
+        trends: [String]
     ) {
         self.id = id
         self.createdAt = createdAt
         self.periodStart = periodStart
         self.periodEnd = periodEnd
         self.summary = summary
-        self.highlights = highlights
+        self.similarities = similarities
+        self.trends = trends
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        periodStart = try container.decode(Date.self, forKey: .periodStart)
+        periodEnd = try container.decode(Date.self, forKey: .periodEnd)
+        summary = try container.decode(String.self, forKey: .summary)
+        let decodedSimilarities = try container.decodeIfPresent([String].self, forKey: .similarities) ?? []
+        let decodedTrends = try container.decodeIfPresent([String].self, forKey: .trends) ?? []
+        if decodedSimilarities.isEmpty && decodedTrends.isEmpty {
+            let highlights = try container.decodeIfPresent([String].self, forKey: .highlights) ?? []
+            similarities = highlights
+            trends = []
+        } else {
+            similarities = decodedSimilarities
+            trends = decodedTrends
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(periodStart, forKey: .periodStart)
+        try container.encode(periodEnd, forKey: .periodEnd)
+        try container.encode(summary, forKey: .summary)
+        try container.encode(similarities, forKey: .similarities)
+        try container.encode(trends, forKey: .trends)
     }
 }

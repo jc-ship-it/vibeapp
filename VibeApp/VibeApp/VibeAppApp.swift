@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct VibeAppApp: App {
+struct PeeqiApp: App {
     @StateObject private var store = ScreenshotStore()
     @StateObject private var auth = AuthStore()
     @StateObject private var sync = SyncSettings()

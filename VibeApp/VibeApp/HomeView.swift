@@ -63,7 +63,6 @@ struct HomeView: View {
                                     .foregroundColor(.red)
                             }
                         }
-                        .font(.callout)
                     }
                     .glassCard()
                     .animation(.spring(response: 0.3, dampingFraction: 0.9), value: isProcessing)

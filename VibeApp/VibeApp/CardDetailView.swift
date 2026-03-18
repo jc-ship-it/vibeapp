@@ -3,63 +3,120 @@ import SwiftUI
 struct CardDetailView: View {
     @EnvironmentObject private var store: ScreenshotStore
     @State private var item: ScreenshotItem
-    @State private var tagText: String
-    @State private var keywordText: String
+    @State private var isAnalyzing = false
+    @State private var errorMessage: String?
 
     init(item: ScreenshotItem) {
         _item = State(initialValue: item)
-        _tagText = State(initialValue: item.tags.joined(separator: ", "))
-        _keywordText = State(initialValue: item.keywords.joined(separator: ", "))
     }
 
     var body: some View {
-        Form {
-            Section("来源") {
-                TextField("来源 App（如小红书、B 站）", text: Binding(
-                    get: { item.sourceApp ?? "" },
-                    set: { item.sourceApp = $0.isEmpty ? nil : $0 }
-                ))
-                TextField("来源场景（帖子/评论等）", text: Binding(
-                    get: { item.sourceContext ?? "" },
-                    set: { item.sourceContext = $0.isEmpty ? nil : $0 }
-                ))
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                    Text("卡片详情")
+                        .font(.largeTitle.bold())
+                    Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top, DesignTokens.Spacing.sm)
 
-            Section("OCR 原文") {
-                TextEditor(text: $item.ocrText)
-                    .frame(minHeight: 160)
-            }
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("OCR 原文")
+                        .font(.headline)
+                    Text(item.ocrText)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .glassCard()
 
-            Section("摘要") {
-                TextEditor(text: Binding(
-                    get: { item.summary ?? "" },
-                    set: { item.summary = $0.isEmpty ? nil : $0 }
-                ))
-                .frame(minHeight: 120)
-            }
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("摘要")
+                        .font(.headline)
+                    Text(item.summary ?? "尚未生成摘要。")
+                        .font(.body)
+                        .foregroundColor(item.summary == nil ? .secondary : .primary)
+                }
+                .glassCard()
 
-            Section("标签（逗号分隔）") {
-                TextField("例如：学习, 产品, 购物", text: $tagText)
-                    .textInputAutocapitalization(.never)
-            }
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("标签")
+                        .font(.headline)
+                    if item.tags.isEmpty {
+                        Text("尚未生成标签。")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(item.tags.joined(separator: " · "))
+                            .font(.body)
+                            .foregroundColor(.primary)
+                    }
+                }
+                .glassCard()
 
-            Section("关键词（逗号分隔）") {
-                TextField("例如：增长, 复盘", text: $keywordText)
-                    .textInputAutocapitalization(.never)
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("关键词")
+                        .font(.headline)
+                    if item.keywords.isEmpty {
+                        Text("尚未生成关键词。")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(item.keywords.joined(separator: " · "))
+                            .font(.body)
+                            .foregroundColor(.primary)
+                    }
+                }
+                .glassCard()
+
+                Button {
+                    Task { await generateSummaryAndTags() }
+                } label: {
+                    HStack {
+                        if isAnalyzing {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "sparkles")
+                        }
+                        Text(isAnalyzing ? "正在生成摘要与标签..." : "用 AI 生成摘要与标签")
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: DesignTokens.Sizes.primaryButtonHeight)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isAnalyzing)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.callout)
+                        .foregroundColor(.red)
+                }
             }
+            .padding(.horizontal, DesignTokens.Spacing.sm)
+            .padding(.bottom, DesignTokens.Spacing.xl)
         }
-        .navigationTitle("卡片详情")
+        .navigationBarTitleDisplayMode(.inline)
         .onDisappear {
-            item.tags = normalizeList(from: tagText)
-            item.keywords = normalizeList(from: keywordText)
             store.update(item: item)
         }
     }
 
-    private func normalizeList(from text: String) -> [String] {
-        text
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+    private func generateSummaryAndTags() async {
+        guard !item.ocrText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isAnalyzing = true
+        errorMessage = nil
+        defer { isAnalyzing = false }
+
+        do {
+            let result = try await AIService.shared.analyzeCard(text: item.ocrText)
+            item.summary = result.summary.isEmpty ? nil : result.summary
+            item.tags = result.tags
+            item.keywords = result.keywords
+            store.update(item: item)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

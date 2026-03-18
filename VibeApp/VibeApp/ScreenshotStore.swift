@@ -4,17 +4,21 @@ import Combine
 
 final class ScreenshotStore: ObservableObject {
     @Published private(set) var items: [ScreenshotItem] = []
+    @Published private(set) var reports: [TrendReport] = []
     @Published var latestReport: TrendReport?
 
     private let fileManager = FileManager.default
     private let itemsURL: URL
+    private let reportsURL: URL
     private let imagesFolderURL: URL
 
     init() {
         let documents = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
         itemsURL = documents.appendingPathComponent("screenshot_items.json")
+        reportsURL = documents.appendingPathComponent("trend_reports.json")
         imagesFolderURL = documents.appendingPathComponent("screenshots", isDirectory: true)
         loadItems()
+        loadReports()
     }
 
     func addScreenshot(imageData: Data, ocrText: String, confidence: Double?) {
@@ -32,6 +36,8 @@ final class ScreenshotStore: ObservableObject {
 
     func setReport(_ report: TrendReport) {
         latestReport = report
+        reports.insert(report, at: 0)
+        saveReports()
     }
 
     private func loadItems() {
@@ -44,6 +50,19 @@ final class ScreenshotStore: ObservableObject {
     private func saveItems() {
         guard let data = try? JSONEncoder().encode(items) else { return }
         try? data.write(to: itemsURL, options: [.atomic])
+    }
+
+    private func loadReports() {
+        guard let data = try? Data(contentsOf: reportsURL) else { return }
+        if let decoded = try? JSONDecoder().decode([TrendReport].self, from: data) {
+            reports = decoded
+            latestReport = decoded.first
+        }
+    }
+
+    private func saveReports() {
+        guard let data = try? JSONEncoder().encode(reports) else { return }
+        try? data.write(to: reportsURL, options: [.atomic])
     }
 
     private func saveImage(data: Data) -> URL? {
