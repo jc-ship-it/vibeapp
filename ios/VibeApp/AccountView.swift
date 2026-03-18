@@ -7,6 +7,29 @@ struct AccountView: View {
     @State private var signInError: String?
     @AppStorage("vibeapp_openai_key") private var apiKey: String = ""
     @State private var showApiKey = false
+    @State private var isCheckingKey = false
+    @State private var keyCheckMessage: String?
+    @State private var keyCheckValid = false
+
+    @MainActor
+    private func runKeyCheck() async {
+        keyCheckMessage = nil
+        keyCheckValid = false
+
+        let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            keyCheckMessage = "请先填写 OpenAI API Key"
+            return
+        }
+
+        isCheckingKey = true
+        defer { isCheckingKey = false }
+
+        let result = await AIService.shared.validateCurrentAPIKey()
+        keyCheckValid = result.keyValid
+        let serverText = result.serverRunning ? "本地服务：运行中" : "本地服务：不可达"
+        keyCheckMessage = "\(serverText)；\(result.message)"
+    }
 
     var body: some View {
         ScrollView {
@@ -86,6 +109,31 @@ struct AccountView: View {
                     Text(apiKey.isEmpty ? "未填写时将使用服务器默认配置。" : "密钥已保存在本机。")
                         .font(.footnote)
                         .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                        Button {
+                            Task { await runKeyCheck() }
+                        } label: {
+                            HStack {
+                                if isCheckingKey {
+                                    ProgressView()
+                                } else {
+                                    Image(systemName: "checkmark.seal")
+                                }
+                                Text(isCheckingKey ? "检测中..." : "检测密钥与服务")
+                            }
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: DesignTokens.Sizes.primaryButtonHeight)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(isCheckingKey || apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                        if let keyCheckMessage {
+                            Text(keyCheckMessage)
+                                .font(.callout)
+                                .foregroundColor(keyCheckValid ? .green : .red)
+                        }
+                    }
                 }
                 .glassCard()
 

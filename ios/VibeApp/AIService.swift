@@ -62,6 +62,70 @@ final class AIService {
         }
     }
 
+    struct APIKeyValidationResult {
+        let serverRunning: Bool
+        let keyValid: Bool
+        let message: String
+    }
+
+    func checkServerHealth(timeout: TimeInterval = 1.5) async -> Bool {
+        let url = baseURL.appendingPathComponent("health")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = timeout
+
+        do {
+            let (_, response) = try await URLSession(configuration: config).data(for: request)
+            guard let http = response as? HTTPURLResponse else { return false }
+            return http.statusCode == 200
+        } catch {
+            return false
+        }
+    }
+
+    func validateCurrentAPIKey(timeout: TimeInterval = 6.0) async -> APIKeyValidationResult {
+        let serverRunning = await checkServerHealth(timeout: timeout)
+
+        guard let key = currentApiKey else {
+            return APIKeyValidationResult(
+                serverRunning: serverRunning,
+                keyValid: false,
+                message: "请先填写 OpenAI API Key"
+            )
+        }
+
+        let ping = "ping"
+        let requestBody = makeResponsesAnalyzeRequest(inputText: ping, maxTokens: 1, temperature: 0.0)
+
+        var request = URLRequest(url: openAIResponsesURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try? JSONEncoder().encode(requestBody)
+
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = timeout
+
+        do {
+            let (_, response) = try await URLSession(configuration: config).data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            switch status {
+            case 200:
+                return APIKeyValidationResult(serverRunning: serverRunning, keyValid: true, message: "API Key 可用")
+            case 401:
+                return APIKeyValidationResult(serverRunning: serverRunning, keyValid: false, message: "API Key 无效（401）")
+            case 429:
+                return APIKeyValidationResult(serverRunning: serverRunning, keyValid: true, message: "API Key 可用（可能已达配额，429）")
+            default:
+                return APIKeyValidationResult(serverRunning: serverRunning, keyValid: false, message: "API Key 异常（HTTP \(status)）")
+            }
+        } catch {
+            return APIKeyValidationResult(serverRunning: serverRunning, keyValid: false, message: "无法连接到 OpenAI：\(error.localizedDescription)")
+        }
+    }
+
     private func analyzeViaServer(texts: [String]) async throws -> AIAnalysisResponse {
         let url = baseURL.appendingPathComponent("analyze")
         var request = URLRequest(url: url)
