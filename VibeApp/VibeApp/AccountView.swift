@@ -27,8 +27,14 @@ struct AccountView: View {
 
         let result = await AIService.shared.validateCurrentAPIKey()
         keyCheckValid = result.keyValid
-        let serverText = result.serverRunning ? "本地服务：运行中" : "本地服务：不可达"
-        keyCheckMessage = "\(serverText)；\(result.message)"
+        if result.keyValid {
+            keyCheckMessage = result.serverRunning
+                ? "本地服务运行中；\(result.message)"
+                : "\(result.message)（本地服务未开启，将直连网关）"
+        } else {
+            let serverText = result.serverRunning ? "本地服务：运行中" : "本地服务：不可达"
+            keyCheckMessage = "\(serverText)；\(result.message)"
+        }
     }
 
     var body: some View {
