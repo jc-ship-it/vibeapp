@@ -1,6 +1,20 @@
 import SwiftUI
 
 enum DesignTokens {
+    enum Colors {
+        /// 主色调：浅色模式黑、深色模式白
+        static var accent: Color {
+            Color(uiColor: UIColor { traitCollection in
+                traitCollection.userInterfaceStyle == .dark ? .white : .black
+            })
+        }
+        static var accentOpposite: Color {
+            Color(uiColor: UIColor { traitCollection in
+                traitCollection.userInterfaceStyle == .dark ? .black : .white
+            })
+        }
+    }
+
     enum Spacing {
         static let xs: CGFloat = 8
         static let sm: CGFloat = 16

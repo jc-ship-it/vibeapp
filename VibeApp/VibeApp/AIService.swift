@@ -21,8 +21,9 @@ final class AIService {
     // 若设备端无法访问该地址，则会自动回退到 OpenAI 直连，保证“立刻可用”。
     private let baseURL = URL(string: "http://localhost:3000")!
     private let apiKeyKey = "vibeapp_openai_key"
-    private let openAIResponsesURL = URL(string: "https://api.openai.com/v1/responses")!
-    private let openAIModel = "gpt-4.1-mini"
+    // 你的自定义网关（兼容 OpenAI Chat Completions）
+    private let openAIChatCompletionsURL = URL(string: "https://z.apiyihe.org/v1/chat/completions")!
+    private let openAIModel = "gpt-4.1"
 
     private var currentApiKey: String? {
         guard let key = UserDefaults.standard.string(forKey: apiKeyKey),
@@ -100,9 +101,9 @@ final class AIService {
 
         // 使用极小请求验证 Key 是否可用，避免解析响应内容。
         let ping = "ping"
-        let requestBody = makeResponsesAnalyzeRequest(inputText: ping, maxTokens: 1, temperature: 0.0)
+        let requestBody = makeChatCompletionsAnalyzeRequest(inputText: ping, maxTokens: 1, temperature: 0.0)
 
-        var request = URLRequest(url: openAIResponsesURL)
+        var request = URLRequest(url: openAIChatCompletionsURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
@@ -187,9 +188,9 @@ final class AIService {
                 .joined(separator: "\n\n"),
         ].joined(separator: "\n")
 
-        let requestBody = makeResponsesAnalyzeRequest(inputText: prompt, maxTokens: 400, temperature: 0.2)
+        let requestBody = makeChatCompletionsAnalyzeRequest(inputText: prompt, maxTokens: 400, temperature: 0.2)
 
-        var request = URLRequest(url: openAIResponsesURL)
+        var request = URLRequest(url: openAIChatCompletionsURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -209,24 +210,29 @@ final class AIService {
     }
 
     private func analyzeCardDirectOpenAI(text: String, apiKey: String) async throws -> AICardAnalysisResponse {
-        let prompt = [
-            "你是信息整理助手，负责为单条截图生成摘要和标签。",
-            "只返回 JSON，格式如下：",
-            "{",
-            "  \"summary\": \"一句话摘要\",",
-            "  \"tags\": [\"标签1\", \"标签2\"],",
-            "  \"keywords\": [\"关键词1\", \"关键词2\", \"关键词3\"]",
-            "}",
-            "约束：tags 必须是短标签（每个不超过 6 个字符/字，2-4 个）；keywords 必须是关键词短语（每个不超过 10 个字符，3-6 个）。",
-            "不要输出额外文本。",
-            "",
-            "截图 OCR 文本：",
-            text
-        ].joined(separator: "\n")
+        let prompt = """
+        You are a personal knowledge assistant. Given OCR text extracted from a user's screenshot, write a concise 1-2 sentence summary in the same language as the text.
 
-        let requestBody = makeResponsesAnalyzeRequest(inputText: prompt, maxTokens: 300, temperature: 0.2)
+        Rules:
+        1. Focus on WHAT the content is about and WHY someone might want to remember it.
+        2. Never list keywords. Never use the phrase "包含...等关键词".
+        3. Write naturally, as if reminding someone what they saved.
+        4. For chat/conversation screenshots: summarize the discussion topic.
+        5. For articles/posts: summarize the main argument or information.
+        6. For UI/settings screens: describe what the user was configuring.
+        7. Extract 3-5 meaningful tags (nouns or short noun phrases only).
+        8. Exclude from tags: UI labels (收起, 展开, 返回, 确定, 取消, 设置, 更多, 分享, 复制, 删除), network indicators (4G, 5G, WiFi, LTE), single characters, pure numbers, words shorter than 2 Chinese characters or 3 English characters.
 
-        var request = URLRequest(url: openAIResponsesURL)
+        Return JSON only:
+        {"summary": "...", "tags": ["...", "..."], "keywords": ["...", "..."]}
+
+        OCR text:
+        \(text)
+        """
+
+        let requestBody = makeChatCompletionsAnalyzeRequest(inputText: prompt, maxTokens: 300, temperature: 0.2)
+
+        var request = URLRequest(url: openAIChatCompletionsURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -245,65 +251,59 @@ final class AIService {
         return parsed
     }
 
-    // MARK: - OpenAI responses request/response helpers
+    // MARK: - OpenAI Chat Completions request/response helpers
 
-    private func makeResponsesAnalyzeRequest(inputText: String, maxTokens: Int, temperature: Double) -> ResponsesAnalyzeRequest {
-        ResponsesAnalyzeRequest(
+    private func makeChatCompletionsAnalyzeRequest(inputText: String, maxTokens: Int, temperature: Double) -> ChatCompletionsAnalyzeRequest {
+        ChatCompletionsAnalyzeRequest(
             model: openAIModel,
-            input: [
-                ResponsesInput(
-                    role: "user",
-                    content: [
-                        ResponsesContent(type: "input_text", text: inputText)
-                    ]
-                )
+            messages: [
+                ChatMessage(role: "user", content: inputText)
             ],
-            maxOutputTokens: maxTokens,
+            maxTokens: maxTokens,
             temperature: temperature
         )
     }
 
-    private struct ResponsesAnalyzeRequest: Encodable {
+    private struct ChatCompletionsAnalyzeRequest: Encodable {
         let model: String
-        let input: [ResponsesInput]
-        let maxOutputTokens: Int
+        let messages: [ChatMessage]
+        let maxTokens: Int
         let temperature: Double
 
         enum CodingKeys: String, CodingKey {
             case model
-            case input
-            case maxOutputTokens = "max_output_tokens"
+            case messages
+            case maxTokens = "max_tokens"
             case temperature
         }
     }
 
-    private struct ResponsesInput: Encodable {
+    private struct ChatMessage: Encodable {
         let role: String
-        let content: [ResponsesContent]
-    }
-
-    private struct ResponsesContent: Encodable {
-        let type: String
-        let text: String
+        let content: String
     }
 
     private func extractOutputText(from data: Data) throws -> String {
+        // Chat Completions：
+        // { "choices":[ { "message": { "content":"..." } } ] }
         let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        if let choices = obj?["choices"] as? [[String: Any]],
+           let first = choices.first,
+           let message = first["message"] as? [String: Any],
+           let content = message["content"] as? String {
+            return content
+        }
+
+        // 兜底：兼容旧 responses 结构（避免你还没完全切换时直接崩溃）
         if let outputText = obj?["output_text"] as? String {
             return outputText
         }
 
-        if let output = obj?["output"] as? [[String: Any]] {
-            // 尝试 data.output[0].content[0].text
-            if let first = output.first,
-               let content = first["content"] as? [[String: Any]],
-               let text = content.first?["text"] as? String {
-                return text
-            }
-        }
-
-        // responses API 的兜底：尝试逐层抓取
-        throw NSError(domain: "AIService", code: 30, userInfo: [NSLocalizedDescriptionKey: "OpenAI 响应缺少 output_text"])
+        throw NSError(
+            domain: "AIService",
+            code: 30,
+            userInfo: [NSLocalizedDescriptionKey: "OpenAI 响应缺少 choices[0].message.content（或 output_text）"]
+        )
     }
 
     private func decodeJSONFromModelOutput<T: Decodable>(_ outputText: String) -> T? {
@@ -328,11 +328,18 @@ final class AIService {
     }
 
     private func fallbackAnalyzeCardLocal(text: String) -> AICardAnalysisResponse {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let summary: String
+        if trimmed.isEmpty {
+            summary = "内容较短，无法生成摘要。"
+        } else {
+            let preview = String(trimmed.prefix(50))
+            summary = preview.count < trimmed.count ? "\(preview)…" : preview
+        }
         let tokens = tokenize(text)
         let top = mostFrequent(tokens, limit: 5)
-        let summary = top.isEmpty ? "本地摘要：内容较短。" : "本地摘要：包含 \(top.joined(separator: "、")) 等关键词。"
-        let tags = top.prefix(3)
-        return AICardAnalysisResponse(summary: summary, tags: tags.map { $0 }, keywords: top)
+        let tags = top.prefix(3).map { $0 }
+        return AICardAnalysisResponse(summary: summary, tags: tags, keywords: top)
     }
 
     private func tokenize(_ input: String) -> [String] {

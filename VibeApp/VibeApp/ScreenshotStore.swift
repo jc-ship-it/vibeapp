@@ -6,6 +6,10 @@ final class ScreenshotStore: ObservableObject {
     @Published private(set) var items: [ScreenshotItem] = []
     @Published private(set) var reports: [TrendReport] = []
     @Published var latestReport: TrendReport?
+    /// 正在等待 AI 处理的卡片 ID
+    @Published var processingIds: Set<UUID> = []
+    /// 从趋势页点击标签跳转时，预设要筛选的标签
+    @Published var historyPreselectedTag: String?
 
     private let fileManager = FileManager.default
     private let itemsURL: URL
@@ -21,11 +25,21 @@ final class ScreenshotStore: ObservableObject {
         loadReports()
     }
 
-    func addScreenshot(imageData: Data, ocrText: String, confidence: Double?) {
+    @discardableResult
+    func addScreenshot(imageData: Data, ocrText: String, confidence: Double?) -> ScreenshotItem {
         let imagePath = saveImage(data: imageData)
         let item = ScreenshotItem(ocrText: ocrText, ocrConfidence: confidence, imageLocalPath: imagePath?.path)
         items.insert(item, at: 0)
         saveItems()
+        return item
+    }
+
+    func addToProcessing(_ id: UUID) {
+        processingIds.insert(id)
+    }
+
+    func removeFromProcessing(_ id: UUID) {
+        processingIds.remove(id)
     }
 
     func update(item: ScreenshotItem) {

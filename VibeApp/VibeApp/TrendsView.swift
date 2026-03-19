@@ -59,10 +59,10 @@ struct TrendsView: View {
             HStack(alignment: .center, spacing: DesignTokens.Spacing.sm) {
                 ZStack {
                     Circle()
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(DesignTokens.Colors.accent.opacity(0.12))
                         .frame(width: 40, height: 40)
                     Image(systemName: "chart.line.uptrend.xyaxis")
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(DesignTokens.Colors.accent)
                 }
 
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
@@ -98,6 +98,7 @@ struct TrendsView: View {
                     .frame(maxWidth: .infinity, minHeight: DesignTokens.Sizes.primaryButtonHeight)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(DesignTokens.Colors.accent)
                 .disabled(isAnalyzing || store.items.isEmpty)
 
                 if let analysisError {
@@ -125,11 +126,14 @@ struct TrendsView: View {
         do {
             let texts = store.items.map { $0.ocrText }
             let result = try await AIService.shared.analyze(texts: texts)
+            let periodStart = store.items.last?.createdAt ?? Date()
+            let periodEnd = store.items.first?.createdAt ?? Date()
+            let filteredSimilarities = StopWordFilter.filterTags(result.similarities)
             let report = TrendReport(
-                periodStart: store.items.last?.createdAt ?? Date(),
-                periodEnd: store.items.first?.createdAt ?? Date(),
+                periodStart: periodStart,
+                periodEnd: periodEnd,
                 summary: result.summary,
-                similarities: result.similarities,
+                similarities: filteredSimilarities,
                 trends: result.trends
             )
             store.setReport(report)

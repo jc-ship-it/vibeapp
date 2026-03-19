@@ -4,7 +4,10 @@ import UIKit
 struct TimelineView: View {
     @EnvironmentObject private var store: ScreenshotStore
     @State private var searchText = ""
+    @State private var debouncedSearchText = ""
+    @State private var searchDebounceTask: Task<Void, Never>?
     @State private var selectedTag = ""
+    @State private var hasAppliedPreselectedTag = false
     @State private var isManaging = false
     @State private var selectedItemIDs: Set<UUID> = []
     @State private var showDeleteAlert = false
@@ -38,15 +41,15 @@ struct TimelineView: View {
 
                                 VStack(spacing: DesignTokens.Spacing.sm) {
                                     ForEach(Array(section.items.enumerated()), id: \.element.id) { idx, item in
-                                        let isLast = idx == section.items.count - 1
                                         if isManaging {
                                             Button {
                                                 toggleSelection(item.id)
                                             } label: {
                                                 TimelineRow(
                                                     item: item,
-                                                    showLine: !isLast,
-                                                    isSelected: selectedItemIDs.contains(item.id)
+                                                    isProcessing: store.processingIds.contains(item.id),
+                                                    isSelected: selectedItemIDs.contains(item.id),
+                                                    searchTerm: debouncedSearchText
                                                 )
                                             }
                                             .buttonStyle(.plain)
@@ -54,8 +57,9 @@ struct TimelineView: View {
                                             NavigationLink(destination: CardDetailView(item: item)) {
                                                 TimelineRow(
                                                     item: item,
-                                                    showLine: !isLast,
-                                                    isSelected: false
+                                                    isProcessing: store.processingIds.contains(item.id),
+                                                    isSelected: false,
+                                                    searchTerm: debouncedSearchText
                                                 )
                                             }
                                             .buttonStyle(.plain)
@@ -74,6 +78,24 @@ struct TimelineView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "搜索内容或标签")
+        .onChange(of: searchText) { _, newValue in
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    debouncedSearchText = newValue
+                }
+            }
+        }
+        .onAppear {
+            debouncedSearchText = searchText
+            if let tag = store.historyPreselectedTag, !hasAppliedPreselectedTag {
+                selectedTag = tag
+                hasAppliedPreselectedTag = true
+                store.historyPreselectedTag = nil
+            }
+        }
         .alert("删除", isPresented: $showDeleteAlert) {
             Button("取消", role: .cancel) {}
             Button("删除", role: .destructive) {
@@ -159,7 +181,7 @@ struct TimelineView: View {
                 }
             }
             .padding(.top, DesignTokens.Spacing.xs)
-            .padding(.bottom, -DesignTokens.Spacing.xs)
+            .padding(.bottom, DesignTokens.Spacing.xs)
         }
     }
 
@@ -196,19 +218,37 @@ struct TimelineView: View {
     }
 
     private var filteredItems: [ScreenshotItem] {
-        store.items.filter { item in
+        let query = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var items = store.items.filter { item in
             let matchesTag = selectedTag.isEmpty || item.tags.contains(selectedTag)
-            let matchesSearch: Bool
-            if searchText.isEmpty {
-                matchesSearch = true
-            } else {
-                matchesSearch =
-                    item.ocrText.localizedCaseInsensitiveContains(searchText) ||
-                    item.tags.contains(where: { $0.localizedCaseInsensitiveContains(searchText) }) ||
-                    (item.summary?.localizedCaseInsensitiveContains(searchText) ?? false)
-            }
+            guard !query.isEmpty else { return matchesTag }
+            let matchesSearch =
+                item.ocrText.localizedCaseInsensitiveContains(query) ||
+                item.tags.contains(where: { $0.localizedCaseInsensitiveContains(query) }) ||
+                (item.summary?.localizedCaseInsensitiveContains(query) ?? false) ||
+                item.keywords.contains(where: { $0.localizedCaseInsensitiveContains(query) })
             return matchesTag && matchesSearch
         }
+        if !query.isEmpty {
+            items = items.sorted { item1, item2 in
+                let score1 = searchMatchScore(item1, query: query)
+                let score2 = searchMatchScore(item2, query: query)
+                if score1 != score2 { return score1 > score2 }
+                return item1.createdAt > item2.createdAt
+            }
+        } else {
+            items = items.sorted { $0.createdAt > $1.createdAt }
+        }
+        return items
+    }
+
+    private func searchMatchScore(_ item: ScreenshotItem, query: String) -> Int {
+        let q = query.lowercased()
+        if item.tags.contains(where: { $0.lowercased() == q }) { return 3 }
+        if item.summary?.lowercased().contains(q) == true { return 2 }
+        if item.ocrText.lowercased().contains(q) { return 1 }
+        if item.keywords.contains(where: { $0.lowercased().contains(q) }) { return 1 }
+        return 0
     }
 
     private var visibleItemIDs: Set<UUID> {
@@ -226,10 +266,9 @@ struct TimelineView: View {
     }
 
     private var sections: [DateSection] {
-        let sorted = filteredItems.sorted(by: { $0.createdAt > $1.createdAt })
-        let grouped = Dictionary(grouping: sorted) { startOfDay($0.createdAt) }
+        let grouped = Dictionary(grouping: filteredItems) { startOfDay($0.createdAt) }
         let keys = grouped.keys.sorted(by: >)
-        return keys.map { DateSection(date: $0, items: grouped[$0] ?? []) }
+        return keys.map { DateSection(date: $0, items: (grouped[$0] ?? []).sorted { $0.createdAt > $1.createdAt }) }
     }
 
     private func startOfDay(_ date: Date) -> Date {
@@ -288,17 +327,13 @@ struct TimelineView: View {
 
 private struct TimelineRow: View {
     let item: ScreenshotItem
-    let showLine: Bool
+    var isProcessing: Bool = false
     let isSelected: Bool
+    var searchTerm: String = ""
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
-                TimelineMarker(showLine: showLine)
-                    .padding(.top, 16)
-
-                CardRowView(item: item)
-            }
+            CardRowView(item: item, isProcessing: isProcessing, searchTerm: searchTerm)
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
@@ -310,36 +345,10 @@ private struct TimelineRow: View {
     }
 }
 
-private struct TimelineMarker: View {
-    let showLine: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Circle()
-                .fill(Color.primary)
-                .frame(width: 10, height: 10)
-
-            if showLine {
-                Rectangle()
-                    .fill(Color.secondary.opacity(0.35))
-                    .frame(width: 2, height: 120)
-                    .padding(.top, 4)
-            }
-        }
-        .frame(width: 18)
-    }
-}
-
 private struct CardRowView: View {
     let item: ScreenshotItem
-
-    private var thumbnail: Image? {
-        guard let path = item.imageLocalPath,
-              let uiImage = UIImage(contentsOfFile: path) else {
-            return nil
-        }
-        return Image(uiImage: uiImage)
-    }
+    var isProcessing: Bool = false
+    var searchTerm: String = ""
 
     private func shortenTag(_ text: String, maxCount: Int) -> String {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -347,46 +356,53 @@ private struct CardRowView: View {
         return String(t.prefix(maxCount))
     }
 
+    private var displaySummary: String {
+        if isProcessing { return "正在生成摘要..." }
+        if let s = item.summary, !s.isEmpty { return s }
+        let preview = String(item.ocrText.prefix(80))
+        return item.ocrText.count > 80 ? preview + "…" : preview
+    }
+
+    private func highlightedText(_ text: String) -> Text {
+        let query = searchTerm.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, let range = text.range(of: query, options: .caseInsensitive) else {
+            return Text(text)
+        }
+        let before = String(text[..<range.lowerBound])
+        let match = String(text[range])
+        let after = String(text[range.upperBound...])
+        return Text(before) + Text(match).bold().foregroundColor(.primary) + Text(after)
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
-            if let thumbnail {
-                thumbnail
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 72, height: 128)
-                    .clipped()
-                    .cornerRadius(DesignTokens.Radius.sm)
-            }
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+            Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                .font(.caption2)
+                .foregroundColor(.secondary)
 
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
+            if isProcessing {
+                Text(displaySummary)
+                    .font(.body)
                     .foregroundColor(.secondary)
-
-                Text(item.summary?.isEmpty == false ? item.summary! : item.ocrText)
-                    .font(.headline)
+                    .redacted(reason: .placeholder)
+            } else {
+                highlightedText(displaySummary)
+                    .font(.body)
                     .foregroundColor(.primary)
                     .lineLimit(2)
-
-                if !item.tags.isEmpty {
-                    let tags = item.tags.prefix(3).map { shortenTag($0, maxCount: 5) }
-                    Text(tags.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                if !item.keywords.isEmpty {
-                    let keywords = item.keywords.prefix(4).map { shortenTag($0, maxCount: 5) }
-                    Text(keywords.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !item.tags.isEmpty && !isProcessing {
+                Text(item.tags.prefix(4).map { shortenTag($0, maxCount: 6) }.joined(separator: " · "))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: DesignTokens.Sizes.listRowMinHeight, alignment: .leading)
-        .glassCard()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DesignTokens.Spacing.sm)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

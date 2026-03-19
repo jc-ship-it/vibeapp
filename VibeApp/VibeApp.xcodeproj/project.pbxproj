@@ -11,7 +11,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		0B3E95272F54818400FBD5C9 /* Exceptions for "Peeqi" folder in "Peeqi" target */ = {
+		0B3E95272F54818400FBD5C9 /* Exceptions for "VibeApp" folder in "Peeqi" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -21,10 +21,10 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		0B1EF6BF2F535760007C8438 /* Peeqi */ = {
+		0B1EF6BF2F535760007C8438 /* VibeApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				0B3E95272F54818400FBD5C9 /* Exceptions for "Peeqi" folder in "Peeqi" target */,
+				0B3E95272F54818400FBD5C9 /* Exceptions for "VibeApp" folder in "Peeqi" target */,
 			);
 			path = VibeApp;
 			sourceTree = "<group>";
@@ -45,7 +45,7 @@
 		0B1EF6B42F535760007C8438 = {
 			isa = PBXGroup;
 			children = (
-				0B1EF6BF2F535760007C8438 /* Peeqi */,
+				0B1EF6BF2F535760007C8438 /* VibeApp */,
 				0B1EF6BE2F535760007C8438 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -74,7 +74,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0B1EF6BF2F535760007C8438 /* Peeqi */,
+				0B1EF6BF2F535760007C8438 /* VibeApp */,
 			);
 			name = Peeqi;
 			packageProductDependencies = (
@@ -98,7 +98,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 0B1EF6B82F535760007C8438 /* Build configuration list for PBXProject "Peeqi" */;
+			buildConfigurationList = 0B1EF6B82F535760007C8438 /* Build configuration list for PBXProject "VibeApp" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -330,7 +330,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0B1EF6B82F535760007C8438 /* Build configuration list for PBXProject "Peeqi" */ = {
+		0B1EF6B82F535760007C8438 /* Build configuration list for PBXProject "VibeApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0B1EF6C62F535760007C8438 /* Debug */,
